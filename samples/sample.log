@@ -1,0 +1,9 @@
+2026-08-01T02:58:11Z finance-ws-07 auth: user kganapathy logged in via RDP from 10.0.4.15
+2026-08-01T03:10:02Z finance-ws-07 office: WINWORD.EXE opened Q3_invoice_review.docm
+2026-08-01T03:10:45Z finance-ws-07 office: macro execution enabled by user for Q3_invoice_review.docm
+2026-08-01T03:14:20Z finance-ws-07 EDR: process powershell.exe (pid 4821) parent WINWORD.EXE spawned
+2026-08-01T03:14:20Z finance-ws-07 EDR: powershell.exe command line -enc JABjAGwAaQBlAG4AdAA9AE4AZQB3AC0
+2026-08-01T03:14:22Z finance-ws-07 EDR: outbound TCP 443 to update-cdn-service.info (185.220.101.42) from powershell.exe
+2026-08-01T03:14:23Z finance-ws-07 EDR: file written C:\Users\kganapathy\AppData\Local\Temp\svchost32.exe
+2026-08-01T03:15:01Z finance-ws-07 EDR: process svchost32.exe (pid 4902) parent powershell.exe spawned
+2026-08-01T03:16:40Z finance-ws-07 auth: user kganapathy logged out

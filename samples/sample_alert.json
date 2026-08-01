@@ -1,0 +1,13 @@
+{
+  "source": "EDR",
+  "timestamp": "2026-08-01T03:14:22Z",
+  "severity": "medium",
+  "title": "Suspicious outbound connection from finance-ws-07",
+  "description": "Endpoint agent flagged a process (powershell.exe) making an outbound HTTPS connection to an uncommon domain shortly after a macro-enabled document was opened.",
+  "indicators": [
+    {"type": "domain", "value": "update-cdn-service.info"},
+    {"type": "ip", "value": "185.220.101.42"},
+    {"type": "ip", "value": "10.0.4.15"}
+  ],
+  "raw": "2026-08-01T03:14:20Z finance-ws-07 EDR: process powershell.exe (pid 4821) parent WINWORD.EXE spawned; 2026-08-01T03:14:22Z finance-ws-07 EDR: outbound TCP 443 to update-cdn-service.info (185.220.101.42) from powershell.exe"
+}

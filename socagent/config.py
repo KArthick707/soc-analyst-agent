@@ -12,14 +12,25 @@ def get_model() -> str:
 
 
 def get_max_tool_calls() -> int:
-    """Hard cap on tool calls per triage/chat turn -- bounds LLM round-trips and
-    outbound WHOIS/DNS lookups so a crafted alert or log line can't steer the
-    agent into unbounded lookups or cost."""
+    """Hard cap on tool calls per Tier 1 triage/chat turn -- bounds LLM
+    round-trips and outbound WHOIS/DNS lookups so a crafted alert or log line
+    can't steer the agent into unbounded lookups or cost."""
     return _int_env("SOCAGENT_MAX_TOOL_CALLS", 8, minimum=1)
 
 
 def get_total_timeout_seconds() -> float:
     return _float_env("SOCAGENT_TIMEOUT_SECONDS", 30.0, minimum=1.0)
+
+
+def get_tier2_max_tool_calls() -> int:
+    """Tier 2 investigates alerts Tier 1 already escalated, correlating every
+    indicator rather than stopping at the first one -- it gets a larger
+    budget than Tier 1 triage, not an unbounded one."""
+    return _int_env("SOCAGENT_TIER2_MAX_TOOL_CALLS", 16, minimum=1)
+
+
+def get_tier2_timeout_seconds() -> float:
+    return _float_env("SOCAGENT_TIER2_TIMEOUT_SECONDS", 60.0, minimum=1.0)
 
 
 def get_whois_timeout_seconds() -> float:

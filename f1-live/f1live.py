@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
 import sqlite3
 import sys
 import threading
@@ -389,6 +390,16 @@ def make_handler(app: App):
     return Handler
 
 
+def lan_ip() -> str:
+    """This computer's address on the local network (nothing is actually sent)."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("10.255.255.255", 1))
+            return sock.getsockname()[0]
+    except OSError:
+        return "<this-computer's-IP>"
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="F1 live timing board")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -403,7 +414,9 @@ def main() -> None:
     rep.add_argument("--speed", type=float, default=1.0, help="playback speed multiplier")
     rep.add_argument("--start-min", type=float, default=0.0, help="start this many minutes in")
     for p in (live, rep):
-        p.add_argument("--port", type=int, default=8000)
+        p.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
+        p.add_argument("--host", default="0.0.0.0",
+                       help="0.0.0.0 lets phones and tablets on your Wi-Fi connect; 127.0.0.1 keeps it to this computer")
     args = ap.parse_args()
 
     api, db = OpenF1(), connect()
@@ -441,8 +454,11 @@ def main() -> None:
         clock = lambda: time.time() - args.delay
         mode = "LIVE"
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(App(db, sk, mode, clock)))
-    print(f"Board running at http://localhost:{args.port}  (Ctrl+C to stop)")
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(App(db, sk, mode, clock)))
+    print(f"Board running at http://localhost:{args.port}")
+    if args.host == "0.0.0.0":
+        print(f"On a phone, tablet or TV on the same Wi-Fi: http://{lan_ip()}:{args.port}")
+    print("Ctrl+C to stop")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

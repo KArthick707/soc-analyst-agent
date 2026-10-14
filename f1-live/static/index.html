@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="F1 Live">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <!--ARTIFACT-START-->
 <title>F1 Live Board</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -104,6 +112,8 @@ header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; pa
 .tyre span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .pits { font-family: var(--mono); font-size: 13px; text-align: center; color: var(--muted); }
 
+@media (min-width: 1600px) { .wrap { max-width: 1560px; } :root { --row: 50px; } body { font-size: 16px; } }
+@media (pointer: coarse) and (min-width: 641px) { :root { --row: 50px; } }
 @media (max-width: 640px) {
   :root { --row: 42px; }
   .cols, .row { grid-template-columns: 26px 38px 4px minmax(0, 1fr) 76px 46px; gap: 0 8px; padding: 0 8px; }

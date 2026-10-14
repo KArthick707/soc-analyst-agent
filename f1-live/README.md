@@ -25,6 +25,33 @@ Open http://localhost:8000 in a browser. If you open `static/index.html` directl
 
 > OpenF1 serves historical data for free. Real-time data during a live session needs a paid OpenF1 account. Without one, use `replay` after the race ends. Data is usually available shortly after the session.
 
+## Open it on every device
+
+The board adjusts to phones, tablets, laptops, big monitors and TVs.
+
+**Phones and tablets on your home Wi-Fi.** When the app starts it prints two addresses:
+
+```
+Board running at http://localhost:8000
+On a phone, tablet or TV on the same Wi-Fi: http://192.168.1.23:8000
+```
+
+Open the second one on any device on the same Wi-Fi. If it doesn't load, allow Python through your computer's firewall when it asks, and keep the computer awake during the race.
+
+**Install it like an app.** It has an app icon and opens full screen without the browser bar:
+- iPhone / iPad (Safari): Share → *Add to Home Screen*
+- Android (Chrome): ⋮ menu → *Add to Home screen* / *Install app*
+- Desktop (Chrome / Edge): the install icon at the right end of the address bar
+
+**From anywhere, not only home Wi-Fi.** Host it on a small always-on server using the included `Dockerfile`:
+
+```bash
+docker build -t f1-live .
+docker run -p 8000:8000 -e OPENF1_USERNAME=... -e OPENF1_PASSWORD=... f1-live live
+```
+
+Services such as Render, Fly.io or Railway can deploy straight from this folder's Dockerfile. They set `PORT` automatically and the app picks it up. Use `--host 127.0.0.1` if you ever want to keep it to one computer.
+
 ## What's on screen
 
 | Area | Shows |

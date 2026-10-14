@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--ARTIFACT-START-->
+<title>F1 Live Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: pit-wall timing screen. Header strip, movers ribbon, then timing tower + race feed side by side. Single dark theme by design. */
+:root {
+  --bg: #0a0c11;
+  --panel: #11141c;
+  --panel-2: #161a24;
+  --line: #222838;
+  --fg: #eef1f7;
+  --muted: #8790a4;
+  --f1red: #e10600;
+  --gain: #2fd17a;
+  --loss: #ff4d5e;
+  --purple: #b14cff;
+  --yellow: #ffd400;
+  --display: "Titillium Web", "Arial Narrow", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --row: 46px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body {
+  margin: 0; font-family: var(--display); font-size: 15px;
+  padding-block: 16px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 100%;
+}
+.wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+/* header */
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-bottom: 14px; border-bottom: 2px solid var(--f1red); }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .f1 { font-weight: 900; font-style: italic; font-size: 34px; line-height: 1; background: var(--f1red); color: #fff; padding: 2px 14px 4px 10px; clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); letter-spacing: -1px; }
+.brand .word { font-weight: 900; font-size: 26px; letter-spacing: 3px; text-transform: uppercase; }
+.session { display: flex; flex-direction: column; min-width: 0; }
+.session .gp { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
+.session .sub { color: var(--muted); font-size: 13px; letter-spacing: .5px; }
+.hdr-right { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lapbox { text-align: right; }
+.lapbox .lbl { color: var(--muted); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+.lapbox .val { font-family: var(--mono); font-weight: 600; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.lapbox .val small { color: var(--muted); font-size: 16px; }
+.pill { font-weight: 700; font-size: 12px; letter-spacing: 1.5px; padding: 6px 10px; border-radius: 3px; text-transform: uppercase; white-space: nowrap; }
+.status-GREEN { background: color-mix(in srgb, var(--gain) 18%, transparent); color: var(--gain); }
+.status-SC, .status-VSC { background: var(--yellow); color: #111; }
+.status-RED { background: var(--loss); color: #fff; }
+.status-CHEQUERED { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0/10px 10px; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.mode { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); color: var(--muted); }
+.mode .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.mode.LIVE { color: var(--fg); border-color: var(--f1red); }
+.mode.LIVE .dot { background: var(--f1red); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+
+/* movers ribbon */
+.movers { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.movers .tag { color: var(--muted); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; align-self: center; white-space: nowrap; padding-right: 4px; }
+.mover { display: flex; align-items: center; gap: 8px; background: var(--panel); border-left: 3px solid var(--c); padding: 6px 10px; white-space: nowrap; font-weight: 700; }
+.mover .d { font-family: var(--mono); font-size: 13px; }
+.up { color: var(--gain); } .down { color: var(--loss); }
+
+/* main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+.card h2 { margin: 0; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; }
+
+/* timing tower */
+.cols, .row { display: grid; grid-template-columns: 34px 44px 4px minmax(0, 1fr) 92px 84px 92px 54px 34px; align-items: center; gap: 0 10px; padding: 0 12px; }
+.cols { height: 30px; font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.cols .r, .row .r { text-align: right; }
+.tower { position: relative; }
+.row { position: absolute; left: 0; right: 0; height: var(--row); transition: transform .7s cubic-bezier(.3,.9,.3,1), background-color .8s; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); will-change: transform; }
+.row:nth-child(even) { background: var(--panel-2); }
+.row.flash-gain { background: color-mix(in srgb, var(--gain) 22%, transparent); }
+.row.flash-loss { background: color-mix(in srgb, var(--loss) 18%, transparent); }
+.row .pos { font-weight: 900; font-size: 20px; font-variant-numeric: tabular-nums; text-align: center; }
+.row .chg { font-family: var(--mono); font-size: 12px; font-weight: 600; text-align: center; padding: 3px 0; border-radius: 2px; }
+.chg.up { background: color-mix(in srgb, var(--gain) 14%, transparent); }
+.chg.down { background: color-mix(in srgb, var(--loss) 14%, transparent); }
+.chg.same { color: var(--muted); }
+.row .stripe { height: 26px; border-radius: 2px; background: var(--c); }
+.row .who { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.row .acr { font-weight: 900; font-size: 18px; letter-spacing: 1px; }
+.row .full { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .num { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.t { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t.muted { color: var(--muted); }
+.t.purple { color: var(--purple); font-weight: 600; }
+.drs { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; background: var(--gain); color: #06120b; padding: 1px 4px; border-radius: 2px; margin-right: 6px; vertical-align: 1px; font-family: var(--display); }
+.pitflag { font-size: 10px; font-weight: 900; letter-spacing: 1.5px; background: var(--fg); color: var(--bg); padding: 2px 6px; border-radius: 2px; }
+.tyre { display: inline-flex; align-items: center; gap: 5px; }
+.tyre i { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--tc); display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 10px; color: var(--fg); }
+.tyre span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.pits { font-family: var(--mono); font-size: 13px; text-align: center; color: var(--muted); }
+
+@media (max-width: 640px) {
+  :root { --row: 42px; }
+  .cols, .row { grid-template-columns: 26px 38px 4px minmax(0, 1fr) 76px 46px; gap: 0 8px; padding: 0 8px; }
+  .hide-sm { display: none; }
+  .row .full { display: none; }
+  .brand .word { display: none; }
+  .hdr-right { margin-left: 0; width: 100%; justify-content: space-between; }
+  .lapbox { text-align: left; }
+}
+
+/* feed */
+.feed { list-style: none; margin: 0; padding: 0; max-height: calc(var(--row) * 22 + 30px); overflow-y: auto; }
+.ev { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); align-items: center; animation: slidein .45s ease-out; }
+@keyframes slidein { from { transform: translateX(-12px); opacity: .2; } }
+.ev .lap { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.ev .body { min-width: 0; line-height: 1.35; }
+.ev .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; }
+.ev .kind { font-size: 10px; letter-spacing: 1.5px; font-weight: 700; padding: 2px 6px; border-radius: 2px; text-transform: uppercase; }
+.k-pass { background: color-mix(in srgb, var(--gain) 16%, transparent); color: var(--gain); }
+.k-pitpass { background: var(--panel-2); color: var(--muted); }
+.k-pit { background: var(--fg); color: var(--bg); }
+.k-rc { background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); }
+.k-YELLOW, .k-SC { background: var(--yellow); color: #111; }
+.k-RED { background: var(--loss); color: #fff; }
+.k-GREEN { background: var(--gain); color: #06120b; }
+.ev .sw { display: inline-block; width: 4px; height: 14px; background: var(--c); border-radius: 1px; }
+.ev .sub { color: var(--muted); font-size: 13px; }
+.ev.dim .head { font-weight: 600; color: var(--muted); }
+.big { font-size: 16px; }
+.pos-badge { font-family: var(--mono); font-size: 12px; color: var(--fg); background: var(--panel-2); padding: 1px 6px; border-radius: 2px; }
+
+footer { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; }
+footer code { font-family: var(--mono); color: var(--fg); }
+.empty { padding: 30px 14px; color: var(--muted); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .row { transition: none; } .ev { animation: none; } .mode.LIVE .dot { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="f1">F1</span><span class="word">Live Board</span></div>
+    <div class="session"><span class="gp" id="gp">Loading…</span><span class="sub" id="sub">&nbsp;</span></div>
+    <div class="hdr-right">
+      <span class="pill status-GREEN" id="status">Track clear</span>
+      <span class="pill mode" id="mode"><span class="dot"></span><span id="modetxt">…</span></span>
+      <div class="lapbox"><div class="lbl">Lap</div><div class="val" id="lap">–</div></div>
+    </div>
+  </header>
+
+  <div class="movers" id="movers"></div>
+
+  <div class="main">
+    <section class="card" aria-label="Timing tower">
+      <h2><span>Classification</span><span id="clock"></span></h2>
+      <div class="cols">
+        <span>Pos</span><span title="Places gained or lost since the start">+/-</span><span></span><span>Driver</span>
+        <span class="r">Gap</span><span class="r hide-sm">Int</span><span class="r hide-sm">Last lap</span><span>Tyre</span><span class="hide-sm" title="Pit stops">Pit</span>
+      </div>
+      <div class="tower" id="tower"></div>
+    </section>
+    <section class="card" aria-label="Race feed">
+      <h2><span>Race feed</span><span>Passes · Pits · Race control</span></h2>
+      <ul class="feed" id="feed"><li class="empty">Overtakes and pit stops will appear here.</li></ul>
+    </section>
+  </div>
+
+  <footer>
+    <span id="foot"></span>
+    <span>Data: OpenF1 (unofficial). Personal use only. Not associated with Formula 1.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const TYRE = { SOFT: ["S", "#ff3b3b"], MEDIUM: ["M", "#ffd400"], HARD: ["H", "#f2f2f2"],
+                 INTERMEDIATE: ["I", "#3ccb5d"], WET: ["W", "#3a8bff"] };
+  const STATUS = { GREEN: "Track clear", SC: "Safety car", VSC: "Virtual safety car", RED: "Red flag", CHEQUERED: "Chequered flag" };
+  const rows = new Map();     // driver number -> row element
+  const lastPos = new Map();  // driver number -> previous position, for flashes
+  const seenFeed = new Set();
+
+  const lapTime = s => {
+    if (s == null) return "–";
+    const m = Math.floor(s / 60), r = (s - m * 60).toFixed(3).padStart(6, "0");
+    return m ? `${m}:${r}` : r;
+  };
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function render(st) {
+    const s = st.session || {};
+    $("gp").textContent = [s.year, s.country, s.name].filter(Boolean).join(" · ") || "Session";
+    $("sub").textContent = s.circuit ? `${s.circuit}${st.drivers.length ? ` · ${st.drivers.length} cars` : ""}` : "";
+    $("lap").innerHTML = st.lap ? `${st.lap}${st.total_laps ? `<small>/${st.total_laps}</small>` : ""}` : "–";
+    $("status").className = `pill status-${st.status}`;
+    $("status").textContent = STATUS[st.status] || st.status;
+    $("mode").className = `pill mode ${st.mode}`;
+    $("modetxt").textContent = st.mode === "DEMO" ? "Demo race" : st.mode === "REPLAY" ? "Replay" : "Live";
+    $("clock").textContent = st.clock ? new Date(st.clock * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+    $("foot").innerHTML = st.mode === "DEMO"
+      ? "Simulated race for preview. Run <code>python f1live.py live</code> for real timing."
+      : `Session data stored in <code>f1.db</code> · refreshed every second`;
+    renderTower(st.drivers);
+    renderMovers(st.drivers);
+    renderFeed(st.feed || []);
+  }
+
+  function renderTower(drivers) {
+    const tower = $("tower");
+    const rowH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row")) || 46;
+    tower.style.height = `${drivers.length * rowH}px`;
+    const present = new Set();
+    drivers.forEach((d, i) => {
+      present.add(d.num);
+      let el = rows.get(d.num);
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "row";
+        el.style.transform = `translateY(${i * rowH}px)`;
+        tower.appendChild(el);
+        rows.set(d.num, el);
+      }
+      const delta = d.start - d.pos;
+      const chg = delta > 0 ? `<span class="chg up">▲${delta}</span>` : delta < 0 ? `<span class="chg down">▼${-delta}</span>` : `<span class="chg same">–</span>`;
+      const [tl, tc] = TYRE[d.compound] || ["?", "#555"];
+      const intNum = parseFloat(d.interval);
+      const drs = d.pos > 1 && intNum > 0 && intNum < 1 ? `<span class="drs">DRS</span>` : "";
+      el.style.setProperty("--c", d.colour);
+      el.innerHTML = `
+        <span class="pos">${d.pos}</span>${chg}<span class="stripe"></span>
+        <span class="who"><span class="acr">${esc(d.acr)}</span><span class="full">${esc(d.name)}</span><span class="num">${d.num}</span></span>
+        <span class="r">${d.in_pit ? `<span class="pitflag">IN PIT</span>` : `<span class="t ${d.pos === 1 ? "muted" : ""}">${esc(d.gap) || "–"}</span>`}</span>
+        <span class="r hide-sm">${drs}<span class="t muted">${esc(d.interval)}</span></span>
+        <span class="r hide-sm t ${d.fastest ? "purple" : ""}">${lapTime(d.last)}</span>
+        <span class="tyre"><i style="--tc:${tc}">${tl}</i><span>${d.tyre_age ?? ""}</span></span>
+        <span class="pits hide-sm">${d.pits || ""}</span>`;
+      el.style.transform = `translateY(${i * rowH}px)`;
+      el.style.zIndex = String(100 - i);
+      const prev = lastPos.get(d.num);
+      if (prev && prev !== d.pos) {
+        el.classList.remove("flash-gain", "flash-loss");
+        void el.offsetWidth;
+        el.classList.add(d.pos < prev ? "flash-gain" : "flash-loss");
+        setTimeout(() => el.classList.remove("flash-gain", "flash-loss"), 1400);
+      }
+      lastPos.set(d.num, d.pos);
+    });
+    for (const [num, el] of rows) if (!present.has(num)) { el.remove(); rows.delete(num); lastPos.delete(num); }
+  }
+
+  function renderMovers(drivers) {
+    if (!drivers.length) { $("movers").innerHTML = ""; return; }
+    const by = [...drivers].map(d => ({ ...d, delta: d.start - d.pos }));
+    const gain = by.filter(d => d.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 4);
+    const lose = by.filter(d => d.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+    const chip = (d, cls, sym) => `<span class="mover" style="--c:${d.colour}">${esc(d.acr)} <span class="d ${cls}">${sym}${Math.abs(d.delta)}</span><span class="d" style="color:var(--muted)">P${d.start}→P${d.pos}</span></span>`;
+    $("movers").innerHTML =
+      (gain.length ? `<span class="tag">Biggest gains</span>${gain.map(d => chip(d, "up", "▲")).join("")}` : "") +
+      (lose.length ? `<span class="tag">Dropped</span>${lose.map(d => chip(d, "down", "▼")).join("")}` : "");
+  }
+
+  function renderFeed(feed) {
+    const ul = $("feed");
+    if (!feed.length) { ul.innerHTML = `<li class="empty">Overtakes and pit stops will appear here.</li>`; seenFeed.clear(); return; }
+    ul.innerHTML = feed.map(e => {
+      const key = `${e.t}|${e.type}|${e.who || ""}|${e.victim || e.text || ""}`;
+      const fresh = !seenFeed.has(key) ? "" : ` style="animation:none"`;
+      seenFeed.add(key);
+      const lap = `<span class="lap">${e.lap ? "L" + e.lap : ""}</span>`;
+      if (e.type === "overtake") {
+        const track = e.kind === "track";
+        return `<li class="ev ${track ? "" : "dim"}"${fresh}>${lap}<div class="body">
+          <div class="head"><span class="kind ${track ? "k-pass" : "k-pitpass"}">${track ? "Overtake" : "Via pits"}</span>
+          <span class="sw" style="--c:${e.colour}"></span><span class="big">${esc(e.who)}</span> passes ${esc(e.victim)} <span class="pos-badge">P${e.pos}</span></div></div></li>`;
+      }
+      if (e.type === "pit") {
+        return `<li class="ev"${fresh}>${lap}<div class="body"><div class="head"><span class="kind k-pit">Pit stop</span>
+          <span class="sw" style="--c:${e.colour}"></span><span class="big">${esc(e.who)}</span></div>
+          <div class="sub">${e.duration ? `Stationary / lane time ${Number(e.duration).toFixed(1)}s` : "In the pit lane"}${e.compound ? ` · fitted ${esc(e.compound.toLowerCase())}s` : ""}</div></div></li>`;
+      }
+      const msg = (e.text || "").toUpperCase();
+      const k = msg.includes("SAFETY CAR") ? "k-SC" : e.flag === "YELLOW" || e.flag === "DOUBLE YELLOW" ? "k-YELLOW" : e.flag === "RED" ? "k-RED" : e.flag === "GREEN" || e.flag === "CLEAR" ? "k-GREEN" : "k-rc";
+      return `<li class="ev"${fresh}>${lap}<div class="body"><div class="head"><span class="kind ${k}">${esc(e.flag || e.category || "Race control")}</span></div>
+        <div class="sub">${esc(e.text)}</div></div></li>`;
+    }).join("");
+  }
+
+  // ── Data source: local server if present, otherwise the demo race ─────────
+  async function tryServer() {
+    try {
+      const r = await fetch("api/state", { cache: "no-store" });
+      if (!r.ok) return false;
+      const st = await r.json();
+      if (!st || !Array.isArray(st.drivers)) return false;
+      render(st);
+      setInterval(async () => {
+        try { const r2 = await fetch("api/state", { cache: "no-store" }); if (r2.ok) render(await r2.json()); } catch {}
+      }, 1000);
+      return true;
+    } catch { return false; }
+  }
+
+  // Demo race: a simple pace model so the board can be previewed without data.
+  function demo() {
+    const GRID = [
+      [1, "NOR", "Lando Norris", "McLaren", "#ff8000", -0.55], [81, "PIA", "Oscar Piastri", "McLaren", "#ff8000", -0.5],
+      [3, "VER", "Max Verstappen", "Red Bull Racing", "#3671c6", -0.6], [6, "HAD", "Isack Hadjar", "Red Bull Racing", "#3671c6", 0.1],
+      [16, "LEC", "Charles Leclerc", "Ferrari", "#e8002d", -0.35], [44, "HAM", "Lewis Hamilton", "Ferrari", "#e8002d", -0.25],
+      [63, "RUS", "George Russell", "Mercedes", "#27f4d2", -0.5], [12, "ANT", "Kimi Antonelli", "Mercedes", "#27f4d2", -0.3],
+      [14, "ALO", "Fernando Alonso", "Aston Martin", "#229971", 0.2], [18, "STR", "Lance Stroll", "Aston Martin", "#229971", 0.45],
+      [10, "GAS", "Pierre Gasly", "Alpine", "#0093cc", 0.25], [43, "COL", "Franco Colapinto", "Alpine", "#0093cc", 0.45],
+      [23, "ALB", "Alexander Albon", "Williams", "#64c4ff", 0.05], [55, "SAI", "Carlos Sainz", "Williams", "#64c4ff", 0.0],
+      [30, "LAW", "Liam Lawson", "Racing Bulls", "#6692ff", 0.2], [41, "LIN", "Arvid Lindblad", "Racing Bulls", "#6692ff", 0.35],
+      [31, "OCO", "Esteban Ocon", "Haas F1 Team", "#b6babd", 0.3], [87, "BEA", "Oliver Bearman", "Haas F1 Team", "#b6babd", 0.2],
+      [27, "HUL", "Nico Hulkenberg", "Audi", "#bb0a30", 0.3], [5, "BOR", "Gabriel Bortoleto", "Audi", "#bb0a30", 0.35],
+      [11, "PER", "Sergio Perez", "Cadillac", "#e6c46c", 0.6], [77, "BOT", "Valtteri Bottas", "Cadillac", "#e6c46c", 0.65],
+    ];
+    const TOTAL = 57, BASE = 91.4, DT = 1.5, TICK = 250;
+    let race, t, feed, status, vscUntil, fastest, finishedAt, clearAt;
+
+    function start() {
+      t = 0; feed = []; status = "GREEN"; vscUntil = 0; fastest = Infinity; finishedAt = null; clearAt = null;
+      const cars = GRID.map(([num, acr, name, team, colour, pace]) => ({
+        num, acr, name, team, colour, pace: pace + (Math.random() - 0.5) * 0.3,
+        q: pace + (Math.random() - 0.5) * 0.9,
+      }));
+      cars.sort((a, b) => a.q - b.q);
+      race = cars.map((c, i) => ({
+        ...c, start: i + 1, pos: i + 1, dist: -i * 0.0016, lap: 1, last: null, best: null,
+        compound: Math.random() < 0.25 ? "SOFT" : "MEDIUM", tyreLapStart: 1, pits: 0,
+        pitLap: 15 + Math.floor(Math.random() * 17), pitLeft: 0, pitAt: -999, lapStartT: 0,
+        lapTime: lapFor(c.pace, 1, 0),
+      }));
+      push({ type: "rc", category: "Flag", flag: "GREEN", text: "GREEN LIGHT - PIT EXIT OPEN", lap: 1 });
+    }
+    function lapFor(pace, lap, age) {
+      return BASE + pace + age * 0.045 + (lap === 1 ? 5 : 0) + gauss() * 0.38 - lap * 0.03;
+    }
+    function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) * 1.15; }
+    function push(e) { feed.unshift({ t: Date.now() / 1000 + feed.length * 1e-6, ...e }); feed = feed.slice(0, 40); }
+    const leaderLap = () => Math.max(1, ...race.map(c => c.lap));
+
+    function step() {
+      if (finishedAt) { if (Date.now() - finishedAt > 12000) start(); return; }
+      t += DT;
+      const before = race.map(c => c.num);
+      if (vscUntil && t > vscUntil) { vscUntil = 0; status = "GREEN"; push({ type: "rc", category: "SafetyCar", flag: "GREEN", text: "VIRTUAL SAFETY CAR ENDING", lap: leaderLap() }); }
+      for (const c of race) {
+        if (c.pitLeft > 0) { c.pitLeft -= DT; continue; }
+        let lt = c.lapTime * (status === "VSC" ? 1.35 : 1);
+        const ahead = race[c.pos - 2];
+        if (ahead && (ahead.dist - c.dist) * BASE < 0.7) lt += 0.25; // dirty air
+        const d0 = c.dist;
+        c.dist += DT / lt;
+        const newLap = Math.floor(c.dist) + 1;
+        if (newLap > c.lap && c.dist > 0) {
+          // exact moment the line was crossed inside this tick
+          const crossT = t - DT + DT * (Math.floor(c.dist) - d0) / (c.dist - d0);
+          const done = crossT - c.lapStartT;
+          if (c.lap >= 1 && c.lapStartT > 0) {
+            c.last = done; c.best = Math.min(c.best ?? Infinity, done);
+            if (done < fastest && status === "GREEN") fastest = done;
+          }
+          c.lap = newLap; c.lapStartT = crossT;
+          if (c.lap === c.pitLap && c.lap < TOTAL - 3) {
+            c.pitLeft = 19 + 2 + Math.random() * 1.8;
+            c.pits++; c.pitAt = t;
+            const stop = 2 + Math.random() * 1.4;
+            c.compound = c.compound === "HARD" ? "MEDIUM" : "HARD"; c.tyreLapStart = c.lap;
+            push({ type: "pit", who: c.acr, colour: c.colour, lap: c.lap, duration: stop, compound: c.compound });
+          }
+          c.lapTime = lapFor(c.pace, c.lap, c.lap - c.tyreLapStart);
+        }
+      }
+      race.sort((a, b) => b.dist - a.dist);
+      race.forEach((c, i) => (c.pos = i + 1));
+
+      // Who passed whom this tick
+      race.forEach((c, i) => {
+        const was = before.indexOf(c.num);
+        if (i < was) for (let j = i; j < was; j++) {
+          const v = race.find(x => x.num === before[j]);
+          if (!v || v.num === c.num || v.pos <= c.pos) continue;
+          const viaPit = v.pitLeft > 0 || t - c.pitAt < 40 || t - v.pitAt < 40;
+          push({ type: "overtake", kind: viaPit ? "pit" : "track", who: c.acr, victim: v.acr, pos: c.pos, colour: c.colour, lap: c.lap });
+        }
+      });
+
+      const L = leaderLap();
+      if (L === 3 && !feed.some(e => e.text === "DRS ENABLED")) push({ type: "rc", category: "Drs", text: "DRS ENABLED", lap: 3 });
+      if (Math.random() < 0.0035 && status === "GREEN" && L > 4 && !clearAt) {
+        const sector = 1 + Math.floor(Math.random() * 3);
+        push({ type: "rc", category: "Flag", flag: "YELLOW", text: `YELLOW IN TRACK SECTOR ${sector * 4 + 1}`, lap: L });
+        clearAt = { t: t + 30, text: `CLEAR IN TRACK SECTOR ${sector * 4 + 1}` };
+      }
+      if (clearAt && t >= clearAt.t) { push({ type: "rc", category: "Flag", flag: "CLEAR", text: clearAt.text, lap: L }); clearAt = null; }
+      if (L >= 36 && L <= 44 && status === "GREEN" && !vscUntil && Math.random() < 0.0012 && !feed.some(e => (e.text || "").includes("VIRTUAL"))) {
+        status = "VSC"; vscUntil = t + 130;
+        push({ type: "rc", category: "SafetyCar", flag: null, text: "VIRTUAL SAFETY CAR DEPLOYED", lap: L });
+      }
+      if (race[0].dist >= TOTAL) {
+        status = "CHEQUERED"; finishedAt = Date.now();
+        push({ type: "rc", category: "Flag", flag: "CHEQUERED", text: `CHEQUERED FLAG · ${race[0].name.toUpperCase()} WINS`, lap: TOTAL });
+      }
+    }
+
+    function snapshot() {
+      const lead = race[0];
+      const leadLt = lead.lapTime || BASE;
+      return {
+        mode: "DEMO", clock: Date.now() / 1000, total_laps: TOTAL,
+        session: { year: 2026, country: "Demo Grand Prix", name: "Race", circuit: "Simulated circuit" },
+        lap: Math.min(TOTAL, leaderLap()), status,
+        drivers: race.map((c, i) => {
+          const gapS = (lead.dist - c.dist) * leadLt;
+          const intS = i ? (race[i - 1].dist - c.dist) * leadLt : 0;
+          const lapsDown = Math.floor(lead.dist - c.dist);
+          return {
+            num: c.num, acr: c.acr, name: c.name, team: c.team, colour: c.colour, pos: c.pos, start: c.start, lap: c.lap,
+            gap: i === 0 ? "LEADER" : lapsDown >= 1 ? `+${lapsDown} LAP${lapsDown > 1 ? "S" : ""}` : `+${gapS.toFixed(3)}`,
+            interval: i === 0 ? "" : `+${intS.toFixed(3)}`,
+            last: c.last, best: c.best, fastest: c.best != null && c.best === fastest,
+            compound: c.compound, tyre_age: Math.max(0, c.lap - c.tyreLapStart), pits: c.pits, in_pit: c.pitLeft > 0,
+          };
+        }),
+        feed,
+      };
+    }
+
+    start();
+    // fast-forward a few laps so the first frame already has a race going
+    for (let i = 0; i < 1250; i++) step();
+    render(snapshot());
+    setInterval(() => { step(); render(snapshot()); }, TICK);
+  }
+
+  tryServer().then(ok => { if (!ok) demo(); });
+})();
+</script>
